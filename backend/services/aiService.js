@@ -1,0 +1,240 @@
+import { config } from "../config/config.js";
+import ModelClient, { isUnexpected } from "@azure-rest/ai-inference";
+import { AzureKeyCredential } from "@azure/core-auth";
+
+const PRIMARY_MODEL = "gpt-4.1-mini";
+const FALLBACK_MODEL = "gpt-4.1-nano";
+
+// Request timeout for GitHub Models calls (30 seconds)
+const AI_TIMEOUT_MS = 30_000;
+
+const SYSTEM_PROMPT = `You are a concise Indian real estate expert assistant.
+Rules:
+- Always respond with valid JSON matching the requested schema.
+- Use INR currency (Lakhs/Crores) for all prices.
+- Keep analysis factual and data-driven — no speculation.
+- Never include markdown, code fences, or extra text outside the JSON.`;
+
+class AIService {
+  constructor(apiKey) {
+    if (!apiKey) {
+      throw new Error('[AIService] API key is required — no fallback allowed.');
+    }
+    this.apiKey = apiKey;
+    this.client = ModelClient(
+      "https://models.inference.ai.azure.com",
+      new AzureKeyCredential(this.apiKey)
+    );
+  }
+
+  /**
+   * Generate text using GitHub Models with automatic fallback.
+   * Tries PRIMARY_MODEL first; falls back to FALLBACK_MODEL on rate-limit or error.
+   */
+  async generateText(prompt, systemPrompt = SYSTEM_PROMPT) {
+    const result = await this._callModel(PRIMARY_MODEL, prompt, systemPrompt);
+    if (result) return result;
+
+    // Fallback to nano model if primary fails
+    console.warn(`Primary model (${PRIMARY_MODEL}) failed. Falling back to ${FALLBACK_MODEL}...`);
+    const fallbackResult = await this._callModel(FALLBACK_MODEL, prompt, systemPrompt);
+    if (fallbackResult) return fallbackResult;
+
+    return JSON.stringify({ error: "AI service is temporarily unavailable. Please try again later." });
+  }
+
+  async _callModel(model, prompt, systemPrompt) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      controller.abort();
+      console.warn(`[AI] ${model} timed out after ${AI_TIMEOUT_MS / 1000}s`);
+    }, AI_TIMEOUT_MS);
+
+    try {
+      console.log(`[AI] Calling ${model} at ${new Date().toISOString()}`);
+      const startTime = Date.now();
+
+      const response = await this.client.path("/chat/completions").post({
+        body: {
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: prompt }
+          ],
+          model,
+          temperature: 0.3,
+          max_tokens: 2000,   // increased for richer per-property fields in Phase 3
+          top_p: 1
+        },
+        // Pass abort signal if the SDK supports it
+        ...(controller.signal ? { signal: controller.signal } : {}),
+      });
+
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+      console.log(`[AI] ${model} responded in ${elapsed}s`);
+
+      if (isUnexpected(response)) {
+        console.error(`[AI] ${model} error:`, response.body.error?.message);
+        return null;
+      }
+
+      return response.body.choices[0].message.content;
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        console.error(`[AI] ${model} aborted — timeout exceeded`);
+      } else {
+        console.error(`[AI] ${model} exception:`, error.message);
+      }
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+
+  // ── Data Preparation ──────────────────────────────────────────
+
+  _preparePropertyData(properties, maxProperties = 20) {
+    return properties.slice(0, maxProperties).map(p => ({
+      building_name:     p.building_name,
+      builder_name:      p.builder_name      || '',
+      property_type:     p.property_type,
+      bhk_config:        p.bhk_config        || '',
+      location_address:  p.location_address,
+      price:             p.price             || p.total_price || '',
+      price_per_sqft:    p.price_per_sqft    || '',
+      area_sqft:         p.carpet_area_sqft  || p.area_sqft  || '',
+      possession_status: p.possession_status || '',
+      rera_number:       p.rera_number       || '',
+      parking:           p.parking           || '',
+      floor_number:      p.floor_number      || '',
+      nearby_landmarks:  Array.isArray(p.nearby_landmarks)
+        ? p.nearby_landmarks.slice(0, 3).join(', ')
+        : (p.nearby_landmarks || ''),
+      amenities:         Array.isArray(p.amenities) ? p.amenities.slice(0, 5) : [],
+      description:       p.description
+        ? p.description.substring(0, 150) + (p.description.length > 150 ? '...' : '')
+        : '',
+    }));
+  }
+
+  _prepareLocationData(locations, maxLocations = 5) {
+    return locations.slice(0, maxLocations);
+  }
+
+  // ── Analysis Methods ──────────────────────────────────────────
+
+  async analyzeProperties(properties, { city, locality, bhk, minPrice, maxPrice, propertyType, propertyCategory }) {
+    const preparedProperties = this._preparePropertyData(properties);
+
+    const minNum   = parseFloat(minPrice) || 0;
+    const maxNum   = parseFloat(maxPrice);
+    const minLabel = minNum > 0
+      ? (minNum < 1 ? `₹${Math.round(minNum * 100)}L` : `₹${minNum}Cr`)
+      : null;
+    const maxLabel = maxNum < 1
+      ? `₹${Math.round(maxNum * 100)}L`
+      : `₹${maxNum}Cr`;
+    const budgetRange = minLabel ? `${minLabel}–${maxLabel}` : `up to ${maxLabel}`;
+
+    const typeLabels = {
+      'Flat': 'flat', 'House': 'independent house', 'Villa': 'villa',
+      'Plot': 'plot', 'Penthouse': 'penthouse', 'Studio': 'studio apartment',
+      'Commercial': 'commercial property',
+    };
+    const typeLabel = typeLabels[propertyType] || (propertyType || 'property').toLowerCase();
+
+    const locationStr = locality ? `${locality}, ${city}` : city;
+
+    const prompt = `You are an expert Indian real estate advisor.
+Rank these ${preparedProperties.length} ${typeLabel}s in ${locationStr} for a buyer with budget ${budgetRange}.
+
+Properties:
+${JSON.stringify(preparedProperties, null, 2)}
+
+Rank each property based on:
+1. Price vs locality average (value for money) — use price_per_sqft if available
+2. Builder reputation — known builders (Godrej, Lodha, Prestige, Sobha, DLF, Tata, etc.) score higher; unknown builders are a risk
+3. Possession status — Ready to Move > possession within 1 year > 2026 > 2027+
+4. RERA registration — rera_number present means legally safe; missing is a red flag
+5. Connectivity — metro station, school, hospital in nearby_landmarks scores higher
+
+For EACH property provide all of these fields:
+- match_score: integer 0–100 (fit for buyer's stated criteria)
+- one_line_insight: max 20 words, SPECIFIC — use real data e.g. "₹8,200/sqft below SG Highway avg, RERA ✓, metro 600m"
+- red_flags: array of specific concerns e.g. ["No RERA number", "Possession far at 2027", "Unknown builder"] — empty array [] if none
+- value_verdict: exactly one of "good_deal" | "fair" | "overpriced"
+
+Respond ONLY with this exact JSON (no markdown, no extra text):
+{
+  "overview": [
+    {
+      "name": "building name",
+      "price": "price string",
+      "area": "sqft string",
+      "location": "address",
+      "highlight": "one specific standout feature using actual data",
+      "match_score": 85,
+      "one_line_insight": "specific insight max 20 words",
+      "red_flags": [],
+      "value_verdict": "good_deal"
+    }
+  ],
+  "best_value": {
+    "name": "building name of top pick",
+    "reason": "why it is the best value — reference price_per_sqft, possession, RERA, or connectivity"
+  },
+  "recommendations": [
+    "actionable tip 1 for this specific search",
+    "actionable tip 2",
+    "actionable tip 3"
+  ]
+}`;
+
+    return this.generateText(prompt);
+  }
+
+  async analyzeLocationTrends(locations, city) {
+    const preparedLocations = this._prepareLocationData(locations);
+
+    const prompt = `Analyze these real estate price trends for ${city}:
+
+${JSON.stringify(preparedLocations)}
+
+Respond ONLY with this JSON schema:
+{
+  "trends": [
+    {
+      "location": "area name",
+      "price_per_sqft": 0,
+      "yearly_change_pct": 0,
+      "rental_yield_pct": 0,
+      "outlook": "brief 1-line outlook"
+    }
+  ],
+  "top_appreciation": {
+    "location": "area with highest price growth",
+    "reason": "why in 1 sentence"
+  },
+  "best_rental_yield": {
+    "location": "area with best rental returns",
+    "reason": "why in 1 sentence"
+  },
+  "investment_tips": [
+    "tip 1",
+    "tip 2",
+    "tip 3"
+  ]
+}`;
+
+    return this.generateText(prompt);
+  }
+}
+
+/**
+ * Factory — create an AIService with a caller-supplied API key.
+ * The default-singleton export is intentionally removed:
+ * server env-var keys MUST NOT be used as a fallback.
+ */
+export function createAIService(apiKey) {
+  return new AIService(apiKey);
+}

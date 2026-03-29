@@ -1,0 +1,98 @@
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Toaster } from "sonner";
+import { ErrorBoundary } from "react-error-boundary";
+import { motion, AnimatePresence } from "framer-motion";
+
+// Context
+import { AuthProvider } from "./contexts/AuthContext";
+
+// Components
+import Navbar from "./components/Navbar";
+import ProtectedRoute from "./components/ProtectedRoute";
+import ErrorFallback from "./components/ErrorFallback";
+
+// Pages
+import Login from "./components/login";
+import Dashboard from "./pages/Dashboard";
+import PropertyListings from "./pages/List";
+import Add from "./pages/Add";
+import Update from "./pages/Update";
+import Appointments from "./pages/Appointments";
+import PendingListings from "./pages/PendingListings";
+
+// Page transition variants
+const pageVariants = {
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.3, ease: 'easeOut' } },
+  exit: { opacity: 0, y: -8, transition: { duration: 0.2 } },
+};
+
+// App Layout component
+const AppLayout = () => {
+  const location = useLocation();
+  const isLoginPage = location.pathname === '/login';
+
+  return (
+    <div className="min-h-screen bg-[#FAF8F4]">
+      {!isLoginPage && <Navbar />}
+
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={location.pathname}
+          variants={pageVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          className={!isLoginPage ? "pt-16" : ""}
+        >
+          <Routes location={location}>
+            {/* Public Routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+            {/* Protected Routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/list" element={<PropertyListings />} />
+              <Route path="/add" element={<Add />} />
+              <Route path="/update/:id" element={<Update />} />
+              <Route path="/appointments" element={<Appointments />} />
+              <Route path="/pending-listings" element={<PendingListings />} />
+            </Route>
+
+            {/* 404 Route */}
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  );
+};
+
+const App = () => {
+  return (
+    <ErrorBoundary
+      FallbackComponent={ErrorFallback}
+      onReset={() => window.location.reload()}
+    >
+      <AuthProvider>
+        <AppLayout />
+
+        {/* Toast Notifications — Sonner */}
+        <Toaster
+          position="top-right"
+          richColors
+          closeButton
+          toastOptions={{
+            style: {
+              fontFamily: 'Manrope, sans-serif',
+              fontSize: '14px',
+            },
+          }}
+        />
+      </AuthProvider>
+    </ErrorBoundary>
+  );
+};
+
+export default App;
