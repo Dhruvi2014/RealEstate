@@ -15,6 +15,7 @@ import adminRouter from './routes/adminRoute.js';
 import propertyRoutes from './routes/propertyRoutes.js';
 import getStatusPage from './serverweb.js';
 import { startExpireListingsJob } from './utils/expireListings.js';
+import chatbotRouter from './routes/chatbotRoute.js';
 
 
 dotenv.config({ path: './.env.local' });  // local dev
@@ -109,6 +110,7 @@ app.use('/api/forms', formrouter);
 app.use('/api/news', newsrouter);
 app.use('/api/appointments', appointmentRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/bot', chatbotRouter);
 app.use('/api', propertyRoutes);
 
 

@@ -168,5 +168,11 @@ export const contactAPI = {
     apiClient.post('/forms/submit', data),
 };
 
+// Chatbot API
+export const chatbotAPI = {
+  chat: (data: { message: string; context?: any }) =>
+    apiClient.post('/bot/chat', data),
+};
+
 export default apiClient;
 

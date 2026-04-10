@@ -6,6 +6,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import PageTransition from './components/common/PageTransition';
 import ScrollToTop from './components/common/ScrollToTop';
 import StructuredData from './components/common/StructuredData';
+import Chatbot from './components/common/Chatbot';
 
 // Lazy load pages for better performance (Code Splitting)
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -76,6 +77,7 @@ export default function App() {
           <AnimatedRoutes />
         </Suspense>
         <Toaster position="top-center" richColors />
+        <Chatbot />
       </AuthProvider>
     </BrowserRouter>
   );
