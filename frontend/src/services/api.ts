@@ -174,5 +174,11 @@ export const chatbotAPI = {
     apiClient.post('/bot/chat', data),
 };
 
+// EMI Calculator
+export const emiAPI = {
+  calculate: (data: { principal: number; rate: number; tenureMonths: number }) =>
+    apiClient.post('/emi/calculate', data),
+};
+
 export default apiClient;
 
