@@ -14,8 +14,13 @@ const SignUpPage: React.FC = () => {
     try {
       setError(null);
       const fullName = `${formData.firstName} ${formData.lastName}`.trim();
-      await register(fullName, formData.email, '', formData.password);
-      navigate('/');
+      const loggedInUser = await register(fullName, formData.email, '', formData.password, formData.role);
+      if (loggedInUser.role === 'agent' || loggedInUser.role === 'admin') {
+        const token = localStorage.getItem('buildestate_token');
+        window.location.href = `http://localhost:5174/login?token=${token}&role=${loggedInUser.role}`;
+      } else {
+        navigate('/');
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || err.message || 'Registration failed. Please try again.');
     }

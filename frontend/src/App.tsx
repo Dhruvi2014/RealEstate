@@ -22,6 +22,8 @@ const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 const AddPropertyPage = lazy(() => import('./pages/AddPropertyPage'));
 const MyListingsPage = lazy(() => import('./pages/MyListingsPage'));
 const EmiCalculatorPage = lazy(() => import('./pages/EmiCalculatorPage'));
+const AgentAppointmentsPage = lazy(() => import('./pages/AgentAppointmentsPage'));
+const MyAppointmentsPage = lazy(() => import('./pages/MyAppointmentsPage'));
 
 function NotFoundPage() {
   return (
@@ -47,11 +49,12 @@ function AnimatedRoutes() {
   const location = useLocation();
   
   return (
-    <AnimatePresence mode="wait">
+    <>
       <StructuredData type="website" />
       <StructuredData type="organization" />
-      <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<PageTransition><HomePage /></PageTransition>} />
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname}>
+          <Route path="/" element={<PageTransition><HomePage /></PageTransition>} />
         <Route path="/properties" element={<PageTransition><PropertiesPage /></PageTransition>} />
         <Route path="/property/:id" element={<PageTransition><PropertyDetailsPage /></PageTransition>} />
         <Route path="/ai-hub" element={<PageTransition><AIPropertyHubPage /></PageTransition>} />
@@ -64,9 +67,12 @@ function AnimatedRoutes() {
         <Route path="/add-property" element={<PageTransition><AddPropertyPage /></PageTransition>} />
         <Route path="/my-listings" element={<PageTransition><MyListingsPage /></PageTransition>} />
         <Route path="/emi-calculator" element={<PageTransition><EmiCalculatorPage /></PageTransition>} />
+        <Route path="/agent-appointments" element={<PageTransition><AgentAppointmentsPage /></PageTransition>} />
+        <Route path="/my-appointments" element={<PageTransition><MyAppointmentsPage /></PageTransition>} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
-    </AnimatePresence>
+      </AnimatePresence>
+    </>
   );
 }
 

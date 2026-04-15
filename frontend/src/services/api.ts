@@ -46,11 +46,12 @@ apiClient.interceptors.response.use(
 // Backend register expects { name, email, password }
 // We transform fullName → name here so the UI can keep using fullName
 export const userAPI = {
-  register: (data: { fullName: string; email: string; phone: string; password: string }) =>
+  register: (data: { fullName: string; email: string; phone: string; password: string, role?: string }) =>
     apiClient.post('/users/register', {
       name: data.fullName,
       email: data.email,
       password: data.password,
+      role: data.role,
     }),
 
   login: (data: { email: string; password: string }) =>
@@ -109,6 +110,12 @@ export const appointmentsAPI = {
 
   getByUser: () =>
     apiClient.get('/appointments/user'),
+
+  getAgentAppointments: () =>
+    apiClient.get('/appointments/agent'),
+
+  updateStatus: (id: string, status: string) =>
+    apiClient.put(`/appointments/status`, { appointmentId: id, status }),
 
   cancel: (id: string, reason?: string) =>
     apiClient.put(`/appointments/cancel/${id}`, { cancelReason: reason }),

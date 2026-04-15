@@ -312,3 +312,31 @@ export const rejectListing = async (req, res) => {
     res.status(500).json({ success: false, message: "Error rejecting listing" });
   }
 };
+
+// ── Admin User Management ──────────────────────────────────────────────────────
+export const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find().select('-password');
+    res.json({ success: true, users });
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    res.status(500).json({ success: false, message: "Error fetching users" });
+  }
+};
+
+export const deleteUser = async (req, res) => {
+  try {
+    const user = await User.findByIdAndDelete(req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    // Also delete any property they posted or appointments
+    await Property.deleteMany({ postedBy: req.params.id });
+    await Appointment.deleteMany({ userId: req.params.id });
+
+    res.json({ success: true, message: "User deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    res.status(500).json({ success: false, message: "Error deleting user" });
+  }
+};

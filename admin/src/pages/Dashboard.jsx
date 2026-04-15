@@ -97,6 +97,8 @@ const Dashboard = () => {
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
 
+  const userRole = localStorage.getItem("userRole") || "admin";
+
   const statCards = [
     {
       title: "Total Properties",
@@ -112,13 +114,13 @@ const Dashboard = () => {
       accent: { bg: "bg-emerald-50", icon: "text-emerald-600" },
       description: "Currently active",
     },
-    {
+    ...(userRole === "admin" ? [{
       title: "Total Users",
       value: stats?.totalUsers,
       icon: Users,
       accent: { bg: "bg-blue-50", icon: "text-blue-600" },
       description: "Registered accounts",
-    },
+    }] : []),
     {
       title: "Pending Appointments",
       value: stats?.pendingAppointments,
@@ -285,7 +287,7 @@ const Dashboard = () => {
         </motion.div>
 
         {/* Stat Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className={cn("grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8", userRole === 'admin' ? "lg:grid-cols-4" : "lg:grid-cols-3")}>
           {statCards.map((card, index) => (
             <StatCard key={card.title} {...card} index={index} />
           ))}

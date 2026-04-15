@@ -9,7 +9,8 @@ import {
   updateAppointmentMeetingLink,
   getAppointmentStats,
   submitAppointmentFeedback,
-  getUpcomingAppointments
+  getUpcomingAppointments,
+  getAgentAppointments
 } from "../controller/appointmentController.js";
 
 
@@ -22,6 +23,9 @@ router.get("/user", getAppointmentsByUser);
 router.put("/cancel/:id", cancelAppointment);
 router.put("/feedback/:id", submitAppointmentFeedback);
 router.get("/upcoming", getUpcomingAppointments);
+
+// Agent route
+router.get("/agent", protect, getAgentAppointments);
 
 // Admin routes
 router.get("/all", getAllAppointments);

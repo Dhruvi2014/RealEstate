@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import axios from 'axios';
+import { backendurl } from '../config/constants';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home,
@@ -12,6 +14,7 @@ import {
   LayoutDashboard,
   Bell,
   User,
+  Users,
   ChevronDown,
   Settings,
   ClipboardList,
@@ -24,6 +27,29 @@ const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [userData, setUserData] = useState({ name: '', email: '' });
+
+  const userRole = localStorage.getItem("userRole") || "admin";
+
+  useEffect(() => {
+    document.title = userRole === 'agent' ? "Agent Panel - BuildEstate" : "Admin Panel - BuildEstate";
+    
+    const fetchUser = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const response = await axios.get(`${backendurl}/api/users/me`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (response.data) {
+          setUserData(response.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch user:", error);
+      }
+    };
+    fetchUser();
+  }, [userRole]);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -50,12 +76,13 @@ const Navbar = () => {
   };
 
   const navItems = [
-    { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/list', label: 'Properties', icon: List },
-    { path: '/add', label: 'Add Property', icon: PlusSquare },
-    { path: '/appointments', label: 'Appointments', icon: Calendar },
-    { path: '/pending-listings', label: 'Review Queue', icon: ClipboardList },
-  ];
+    { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'agent'] },
+    { path: '/list', label: 'Properties', icon: List, roles: ['admin', 'agent'] },
+    { path: '/add', label: 'Add Property', icon: PlusSquare, roles: ['agent'] },
+    { path: '/appointments', label: 'Appointments', icon: Calendar, roles: ['agent'] },
+    { path: '/pending-listings', label: 'Review Queue', icon: ClipboardList, roles: ['admin'] },
+    { path: '/users', label: 'Users', icon: Users, roles: ['admin'] },
+  ].filter(item => item.roles.includes(userRole));
 
   return (
     <motion.header
@@ -86,7 +113,7 @@ const Navbar = () => {
                 BuildEstate
               </span>
               <div className="text-[10px] text-[#9CA3AF] font-medium uppercase tracking-widest leading-none">
-                Admin Panel
+                {userRole === 'agent' ? 'Agent Panel' : 'Admin Panel'}
               </div>
             </div>
           </Link>
@@ -142,8 +169,10 @@ const Navbar = () => {
                   <User className="h-4 w-4 text-white" />
                 </div>
                 <div className="text-left hidden lg:block">
-                  <div className="text-sm font-semibold text-[#FAF8F4]">Admin</div>
-                  <div className="text-xs text-[#9CA3AF]">Administrator</div>
+                  <div className="text-sm font-semibold text-[#FAF8F4] capitalize">{userData.name || userRole}</div>
+                  <div className="text-xs text-[#9CA3AF]">
+                    {userRole === 'agent' ? 'Manage your listings' : 'Administrator'}
+                  </div>
                 </div>
                 <ChevronDown
                   className={cn(
@@ -162,9 +191,15 @@ const Navbar = () => {
                     transition={{ duration: 0.15 }}
                     className="absolute right-0 mt-2 w-52 bg-[#1C1B1A] border border-white/10 rounded-xl shadow-2xl py-2 overflow-hidden"
                   >
-                    <div className="px-4 py-3 border-b border-white/10">
-                      <div className="text-sm font-semibold text-[#FAF8F4]">Admin Panel</div>
-                      <div className="text-xs text-[#9CA3AF] mt-0.5">Manage your properties</div>
+                    <div className="px-4 py-4 border-b border-white/10 break-all">
+                      <div className="text-xs text-[#9CA3AF] uppercase tracking-wider mb-1 px-1">Profile View</div>
+                      <div className="bg-white/5 rounded-lg p-3">
+                        <div className="text-sm font-semibold text-[#FAF8F4]">{userData.name || userRole}</div>
+                        <div className="text-xs text-[#9CA3AF] mt-0.5">{userData.email || 'No email available'}</div>
+                        <div className="text-[10px] bg-[#D4755B]/20 text-[#D4755B] font-bold px-2 py-0.5 mt-2 rounded inline-block uppercase tracking-widest">
+                          {userRole}
+                        </div>
+                      </div>
                     </div>
                     <button className="w-full text-left px-4 py-2.5 text-sm text-[#9CA3AF] hover:text-[#FAF8F4] hover:bg-white/10 flex items-center gap-2.5 transition-colors">
                       <Settings className="h-4 w-4" />
@@ -242,8 +277,8 @@ const Navbar = () => {
                     <User className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <div className="text-sm font-semibold text-[#FAF8F4]">Admin</div>
-                    <div className="text-xs text-[#9CA3AF]">Administrator</div>
+                    <div className="text-sm font-semibold text-[#FAF8F4] capitalize">{userData.name || userRole}</div>
+                    <div className="text-xs text-[#9CA3AF]">{userData.email}</div>
                   </div>
                 </div>
                 <button

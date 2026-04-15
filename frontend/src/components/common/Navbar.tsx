@@ -8,6 +8,7 @@ const Navbar: React.FC = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [isProfileOpen, setIsProfileOpen] = React.useState(false);
 
   const { scrollY } = useScroll();
   const bgOpacity = useTransform(scrollY, [0, 100], [0.8, 0.95]);
@@ -54,12 +55,12 @@ const Navbar: React.FC = () => {
         </Link>
 
         {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center gap-8">
+        <div className="hidden lg:flex items-center gap-6">
           {navLinks.map((link) => (
             <Link
               key={link.path}
               to={link.path}
-              className={`font-manrope transition-colors ${
+              className={`font-manrope text-sm transition-colors ${
                 isActive(link.path)
                   ? 'text-[#D4755B] font-semibold'
                   : 'text-[#374151] hover:text-[#D4755B]'
@@ -71,31 +72,81 @@ const Navbar: React.FC = () => {
         </div>
 
         {/* Desktop Auth Buttons */}
-        <div className="hidden md:flex items-center gap-4">
+        <div className="hidden lg:flex items-center gap-4 relative">
           {isAuthenticated && user ? (
             <>
-              <Link
-                to="/my-listings"
-                className={`font-manrope transition-colors ${
-                  isActive('/my-listings')
-                    ? 'text-[#D4755B] font-semibold'
-                    : 'text-[#374151] hover:text-[#D4755B]'
-                }`}
-              >
-                My Listings
-              </Link>
-              <Link
-                to="/add-property"
-                className="bg-[#D4755B] text-white font-manrope font-bold px-5 py-2 rounded-lg hover:bg-[#B86851] transition-all hover:shadow-lg"
-              >
-                + List Property
-              </Link>
-              <button
-                onClick={handleLogout}
-                className="font-manrope font-semibold text-[#374151] hover:text-[#D4755B] transition-colors px-4 py-2"
-              >
-                Logout
-              </button>
+              {user.role?.toLowerCase() === 'agent' && (
+                <Link
+                  to="/add-property"
+                  className="bg-[#D4755B] text-white font-manrope font-semibold text-sm px-4 py-2 rounded-lg hover:bg-[#B86851] transition-all hover:shadow-lg"
+                >
+                  + List Property
+                </Link>
+              )}
+              {/* Profile Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setIsProfileOpen(!isProfileOpen)}
+                  className="flex items-center gap-2 hover:bg-gray-50 p-1.5 rounded-lg transition-colors border border-transparent hover:border-gray-200"
+                >
+                  <div className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center border border-[#E6D5C3]">
+                    <span className="font-syne font-bold text-[#D4755B] text-base uppercase">
+                      {user.name.charAt(0)}
+                    </span>
+                  </div>
+                  <span className="font-material-icons text-gray-500 text-sm">
+                    {isProfileOpen ? 'expand_less' : 'expand_more'}
+                  </span>
+                </button>
+
+                {isProfileOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden"
+                  >
+                    <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+                      <p className="text-sm font-semibold text-gray-800 truncate">{user.name}</p>
+                      <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                      <div className="mt-1 inline-block px-2 py-0.5 bg-[#D4755B]/10 text-[#D4755B] text-[10px] font-bold rounded uppercase tracking-wider">
+                        {user.role || 'Buyer'}
+                      </div>
+                    </div>
+                    
+                    <div className="py-2">
+                      {user.role?.toLowerCase() === 'agent' ? (
+                        <>
+                          <a
+                            href="http://localhost:5174/login"
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-[#D4755B] transition-colors"
+                          >
+                            Agent Dashboard
+                          </a>
+                        </>
+                      ) : (
+                        <Link
+                          to="/my-appointments"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-[#D4755B] transition-colors"
+                          onClick={() => setIsProfileOpen(false)}
+                        >
+                          My Appointments
+                        </Link>
+                      )}
+                    </div>
+                    
+                    <div className="border-t border-gray-100 p-2">
+                      <button
+                        onClick={handleLogout}
+                        className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium flex items-center gap-2"
+                      >
+                        <span className="font-material-icons text-[18px]">logout</span>
+                        Logout
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
             </>
           ) : (
             <>
@@ -117,7 +168,7 @@ const Navbar: React.FC = () => {
 
         {/* Mobile Menu Button */}
         <button 
-          className="md:hidden p-2 text-[#374151] hover:text-[#D4755B] transition-colors"
+          className="lg:hidden p-2 text-[#374151] hover:text-[#D4755B] transition-colors"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         >
           <span className="font-material-icons text-2xl">
@@ -128,7 +179,7 @@ const Navbar: React.FC = () => {
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
-        <div className="md:hidden absolute top-20 left-0 w-full bg-white border-b border-[#E6D5C3] shadow-lg py-4 px-8 flex flex-col gap-4">
+        <div className="lg:hidden absolute top-20 left-0 w-full bg-white border-b border-[#E6D5C3] shadow-lg py-4 px-8 flex flex-col gap-4">
           {navLinks.map((link) => (
             <Link
               key={link.path}
@@ -149,20 +200,25 @@ const Navbar: React.FC = () => {
                 <span className="font-manrope text-sm text-[#374151]">
                   Signed in as <span className="font-semibold">{user.name}</span>
                 </span>
-                <Link
-                  to="/my-listings"
-                  className="font-manrope font-semibold text-[#374151] hover:text-[#D4755B] transition-colors py-2"
-                  onClick={closeMobileMenu}
-                >
-                  My Listings
-                </Link>
-                <Link
-                  to="/add-property"
-                  className="bg-[#D4755B] text-white font-manrope font-bold px-6 py-3 rounded-lg hover:bg-[#B86851] transition-all hover:shadow-lg text-center"
-                  onClick={closeMobileMenu}
-                >
-                  + List Property
-                </Link>
+                {user.role?.toLowerCase() === 'agent' && (
+                  <>
+                    <a
+                      href="http://localhost:5174/login"
+                      className="font-manrope font-semibold text-[#374151] hover:text-[#D4755B] transition-colors py-2"
+                    >
+                      Agent Dashboard
+                    </a>
+                  </>
+                )}
+                {user.role?.toLowerCase() !== 'agent' && (
+                  <Link
+                    to="/my-appointments"
+                    className="font-manrope font-semibold text-[#374151] hover:text-[#D4755B] transition-colors py-2"
+                    onClick={closeMobileMenu}
+                  >
+                    My Appointments
+                  </Link>
+                )}
                 <button
                   onClick={handleLogout}
                   className="font-manrope font-semibold text-[#374151] hover:text-[#D4755B] transition-colors py-2 text-left"

@@ -13,7 +13,8 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ onSubmit }) => {
     email: '',
     password: '',
     confirmPassword: '',
-    agreeToTerms: false
+    agreeToTerms: false,
+    role: 'buyer'
   });
   const [showPassword, setShowPassword] = React.useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
@@ -76,6 +77,51 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ onSubmit }) => {
               required
             />
           </div>
+        </div>
+      </div>
+
+      {/* Role Selection */}
+      <div>
+        <label className="block font-manrope font-extralight text-xs text-[#64748B] uppercase tracking-wider mb-2">
+          I am a
+        </label>
+        <div className="flex gap-4">
+          <label className="flex-1 flex items-center justify-center p-3 border border-[#E6E0DA] bg-[#F5F1E8] rounded-lg cursor-pointer hover:border-[#D4755B] transition-colors relative">
+            <input
+              type="radio"
+              name="role"
+              value="buyer"
+              checked={formData.role === 'buyer'}
+              onChange={handleInputChange}
+              className="absolute opacity-0"
+            />
+            <div className="flex items-center gap-2">
+              <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${formData.role === 'buyer' ? 'border-[#D4755B]' : 'border-[#94A3B8]'}`}>
+                {formData.role === 'buyer' && <div className="w-2 h-2 rounded-full bg-[#D4755B]" />}
+              </div>
+              <span className={`font-manrope text-sm ${formData.role === 'buyer' ? 'font-semibold text-[#0F172A]' : 'text-[#64748B]'}`}>
+                Buyer / User
+              </span>
+            </div>
+          </label>
+          <label className="flex-1 flex items-center justify-center p-3 border border-[#E6E0DA] bg-[#F5F1E8] rounded-lg cursor-pointer hover:border-[#D4755B] transition-colors relative">
+            <input
+              type="radio"
+              name="role"
+              value="agent"
+              checked={formData.role === 'agent'}
+              onChange={handleInputChange}
+              className="absolute opacity-0"
+            />
+            <div className="flex items-center gap-2">
+              <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${formData.role === 'agent' ? 'border-[#D4755B]' : 'border-[#94A3B8]'}`}>
+                {formData.role === 'agent' && <div className="w-2 h-2 rounded-full bg-[#D4755B]" />}
+              </div>
+              <span className={`font-manrope text-sm ${formData.role === 'agent' ? 'font-semibold text-[#0F172A]' : 'text-[#64748B]'}`}>
+                Agent
+              </span>
+            </div>
+          </label>
         </div>
       </div>
 

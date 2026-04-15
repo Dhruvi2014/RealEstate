@@ -13,8 +13,14 @@ const SignInPage: React.FC = () => {
   const handleSignIn = async (formData: any) => {
     try {
       setError(null);
-      await login(formData.email, formData.password);
-      navigate('/');
+      const loggedInUser = await login(formData.email, formData.password);
+      const userRole = (loggedInUser?.role || '').toLowerCase();
+      if (userRole === 'agent' || userRole === 'admin') {
+        const token = localStorage.getItem('buildestate_token');
+        window.location.href = `http://localhost:5174/login?token=${token}&role=${userRole}`;
+      } else {
+        navigate('/');
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || err.message || 'Login failed. Please try again.');
     }

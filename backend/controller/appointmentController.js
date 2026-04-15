@@ -400,6 +400,31 @@ export const getAppointmentsByUser = async (req, res) => {
   }
 };
 
+export const getAgentAppointments = async (req, res) => {
+  try {
+    // Find properties owned by the agent
+    const agentProperties = await Property.find({ postedBy: req.user._id }).select('_id');
+    const propertyIds = agentProperties.map(p => p._id);
+
+    // Find appointments for these properties
+    const appointments = await Appointment.find({ propertyId: { $in: propertyIds } })
+      .populate('propertyId', 'title location image')
+      .populate('userId', 'name email phone')
+      .sort({ date: 1, time: 1 });
+
+    res.json({
+      success: true,
+      appointments
+    });
+  } catch (error) {
+    console.error('Error fetching agent appointments:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching agent appointments'
+    });
+  }
+};
+
 export const updateAppointmentMeetingLink = async (req, res) => {
   try {
     const { appointmentId, meetingLink } = req.body;

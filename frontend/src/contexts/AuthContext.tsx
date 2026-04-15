@@ -5,6 +5,7 @@ interface User {
   _id: string;
   name: string;
   email: string;
+  role?: string;
 }
 
 interface AuthContextType {
@@ -12,8 +13,8 @@ interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (fullName: string, email: string, phone: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
+  register: (fullName: string, email: string, phone: string, password: string, role?: string) => Promise<User>;
   logout: () => void;
 }
 
@@ -47,18 +48,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('buildestate_user', JSON.stringify(data.user));
       setToken(data.token);
       setUser(data.user);
+      return data.user;
     } else {
       throw new Error(data.message || 'Login failed');
     }
   }, []);
 
-  const register = useCallback(async (fullName: string, email: string, phone: string, password: string) => {
-    const { data } = await userAPI.register({ fullName, email, phone, password });
+  const register = useCallback(async (fullName: string, email: string, phone: string, password: string, role?: string) => {
+    const { data } = await userAPI.register({ fullName, email, phone, password, role });
     if (data.success && data.token) {
       localStorage.setItem('buildestate_token', data.token);
       localStorage.setItem('buildestate_user', JSON.stringify(data.user));
       setToken(data.token);
       setUser(data.user);
+      return data.user;
     } else {
       throw new Error(data.message || 'Registration failed');
     }

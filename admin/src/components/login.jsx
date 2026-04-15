@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, Mail, Lock, Shield, ArrowRight, Loader2, Home, Building2, Users, TrendingUp } from "lucide-react";
@@ -14,6 +14,19 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [focusedField, setFocusedField] = useState(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    const role = params.get('role');
+    if (token) {
+      localStorage.setItem("token", token);
+      localStorage.setItem("isAdmin", "true");
+      if (role) localStorage.setItem("userRole", role);
+      toast.success(role === 'agent' ? "Welcome to your Agent Panel!" : "Welcome to your Admin Panel!");
+      navigate("/dashboard");
+    }
+  }, [navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

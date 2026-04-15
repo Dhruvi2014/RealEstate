@@ -18,11 +18,11 @@ import { startExpireListingsJob } from './utils/expireListings.js';
 import chatbotRouter from './routes/chatbotRoute.js';
 import emiRouter from './routes/emiRoute.js';
 
-
 dotenv.config({ path: './.env.local' });  // local dev
 dotenv.config();                          // .env fallback / Render uses process-level env vars
 
 const app = express();
+
 
 // Configure trust proxy for different environments
 if (process.env.NODE_ENV === 'production') {
