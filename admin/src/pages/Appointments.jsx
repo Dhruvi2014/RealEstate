@@ -34,21 +34,30 @@ const Appointments = () => {
   const [meetingLink, setMeetingLink] = useState("");
   const [updatingId, setUpdatingId] = useState(null);
 
+  const [requests, setRequests] = useState([]);
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${backendurl}/api/appointments/all`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      if (response.data.success) {
-        const valid = response.data.appointments.filter((apt) => apt.propertyId);
+      const [appRes, reqRes] = await Promise.all([
+        axios.get(`${backendurl}/api/appointments/all`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }),
+        axios.get(`${backendurl}/api/property-requests/all`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }).catch(() => ({ data: { data: [] } }))
+      ]);
+      if (appRes.data.success) {
+        const valid = appRes.data.appointments.filter((apt) => apt.propertyId);
         setAppointments(valid);
       } else {
-        toast.error(response.data.message);
+        toast.error(appRes.data.message);
+      }
+      if (reqRes.data && reqRes.data.success) {
+        setRequests(reqRes.data.data);
       }
     } catch (error) {
-      console.error("Error fetching appointments:", error);
-      toast.error("Failed to fetch appointments");
+      console.error("Error fetching data:", error);
+      toast.error("Failed to fetch data");
     } finally {
       setLoading(false);
     }
@@ -73,6 +82,25 @@ const Appointments = () => {
       toast.error("Failed to update appointment status");
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const handleRequestStatus = async (requestId, newStatus) => {
+    try {
+      const response = await axios.put(
+        `${backendurl}/api/property-requests/status/${requestId}`,
+        { status: newStatus },
+        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+      );
+      if (response.data.success) {
+        toast.success(`Request ${newStatus} successfully`);
+        fetchAppointments();
+      } else {
+        toast.error(response.data.message);
+      }
+    } catch (error) {
+      console.error("Error updating request status:", error);
+      toast.error("Failed to update request status");
     }
   };
 
@@ -124,7 +152,7 @@ const Appointments = () => {
       <div className="min-h-screen pt-24 flex items-center justify-center bg-[#FAF8F4]">
         <div className="text-center">
           <div className="w-12 h-12 border-3 border-[#D4755B] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-[#5A5856] font-medium">Loading appointments...</p>
+          <p className="text-[#5A5856] font-medium">Loading data...</p>
         </div>
       </div>
     );
@@ -333,6 +361,74 @@ const Appointments = () => {
               </p>
             </div>
           )}
+        </motion.div>
+
+        {/* Requests & Payments Table */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+          className="mt-12 bg-white rounded-2xl border border-[#E6D5C3] shadow-card overflow-hidden">
+          <div className="p-6 border-b border-[#E6D5C3]">
+            <h2 className="text-xl font-bold text-[#1C1B1A]">Payment & Booking Requests</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-[#1C1B1A]">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider">Property</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider">User</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider">Agent</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider">Payment Details</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#F5F1E8]">
+                {requests.map((request) => (
+                  <tr key={request._id} className="hover:bg-[#FAF8F4] transition-colors duration-150">
+                    <td className="px-6 py-4">
+                      <p className="text-sm font-semibold text-[#1C1B1A]">{request.propertyId?.title || 'Unknown Property'}</p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-sm font-semibold text-[#1C1B1A]">{request.userId?.name || 'Unknown'}</p>
+                      <p className="text-xs text-[#9CA3AF]">{request.userId?.email || '—'}</p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-sm text-[#1C1B1A]">{request.agentId?.name || request.agentId || '—'}</p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-sm font-semibold text-[#1C1B1A]">₹{request.bookingAmount?.toLocaleString() || 0}</p>
+                      {request.paymentMethod === 'cash' && <span className="text-[10px] bg-gray-200 px-1.5 py-0.5 rounded text-gray-700 mt-1 inline-block">Cash</span>}
+                      {request.razorpayPaymentId && <span className="text-[10px] bg-blue-100 px-1.5 py-0.5 rounded text-blue-700 mt-1 inline-block">ID: {request.razorpayPaymentId}</span>}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wide
+                        ${request.status === 'pending' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                          request.status === 'confirmed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                          request.status === 'payment_pending' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                          request.status === 'rejected' ? 'bg-red-50 text-red-700 border border-red-200' :
+                          'bg-gray-100 text-gray-700 border border-gray-200'}`}>
+                        {request.status.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {request.status === 'pending' && (
+                        <div className="flex gap-2">
+                          <button onClick={() => handleRequestStatus(request._id, 'accepted')} className="px-2 py-1 bg-emerald-50 text-emerald-700 rounded text-xs font-medium border border-emerald-200 hover:bg-emerald-100">Accept</button>
+                          <button onClick={() => handleRequestStatus(request._id, 'rejected')} className="px-2 py-1 bg-red-50 text-red-700 rounded text-xs font-medium border border-red-200 hover:bg-red-100">Reject</button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {requests.length === 0 && (
+                  <tr>
+                    <td colSpan="6" className="px-6 py-8 text-center text-sm text-[#9CA3AF]">
+                      No payment or booking requests found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </motion.div>
       </div>
     </div>

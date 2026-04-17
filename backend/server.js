@@ -2,8 +2,10 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
-import helmet from 'helmet';
+import helmet from 'helmet'; 
 import compression from 'compression';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import connectdb from './config/mongodb.js';
 import { trackAPIStats } from './middleware/statsMiddleware.js';
 import propertyrouter from './routes/ProductRouter.js';
@@ -17,11 +19,38 @@ import getStatusPage from './serverweb.js';
 import { startExpireListingsJob } from './utils/expireListings.js';
 import chatbotRouter from './routes/chatbotRoute.js';
 import emiRouter from './routes/emiRoute.js';
+import propertyRequestRoutes from './routes/propertyRequestRoutes.js';
 
 dotenv.config({ path: './.env.local' });  // local dev
 dotenv.config();                          // .env fallback / Render uses process-level env vars
 
 const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE']
+  }
+});
+
+// Allow routes to access io
+app.set('socketio', io);
+
+io.on('connection', (socket) => {
+  console.log('Socket client connected:', socket.id);
+  
+  socket.on('join_user_room', (userId) => {
+    // Both user and agent can join their specific room by their MongoDB userId
+    if (userId) {
+      socket.join(userId);
+      console.log(`Socket joined room for user/agent: ${userId}`);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Socket client disconnected:', socket.id);
+  });
+});
 
 
 // Configure trust proxy for different environments
@@ -113,6 +142,7 @@ app.use('/api/appointments', appointmentRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/bot', chatbotRouter);
 app.use('/api/emi', emiRouter);
+app.use('/api/property-requests', propertyRequestRoutes);
 app.use('/api', propertyRoutes);
 
 
@@ -190,7 +220,7 @@ const port = process.env.PORT || 4000;
 
 // Start server
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(port, '0.0.0.0', () => {
+  httpServer.listen(port, '0.0.0.0', () => {
     console.log(`Server running on port ${port}`);
   });
 }

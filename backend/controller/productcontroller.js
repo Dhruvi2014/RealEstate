@@ -13,7 +13,6 @@ const addproperty = async (req, res) => {
 
         const images = [image1, image2, image3, image4].filter((item) => item !== undefined);
 
-        // Upload images to ImageKit and delete after upload
         const imageUrls = await Promise.all(
             images.map(async (item) => {
                 const result = await imagekit.upload({
@@ -28,7 +27,6 @@ const addproperty = async (req, res) => {
             })
         );
 
-        // Create a new product
         const product = new Property({
             title,
             location,
@@ -42,13 +40,13 @@ const addproperty = async (req, res) => {
             amenities,
             image: imageUrls,
             phone,
-            googleMapLink: googleMapLink || ''
+            googleMapLink: googleMapLink || '',
+            postedBy: req.user ? req.user._id : null
         });
 
-        // Save the product to the database
         await product.save();
 
-        res.json({ message: "Product added successfully", success: true });
+        res.json({ message: "Property added successfully", success: true });
     } catch (error) {
         console.log("Error adding product: ", error);
         res.status(500).json({ message: "Server Error", success: false });
@@ -57,9 +55,7 @@ const addproperty = async (req, res) => {
 
 const listproperty = async (req, res) => {
     try {
-        // Only return active properties publicly.
-        // Legacy admin-added documents that pre-date the status field are also
-        // included via the $exists check so they are not accidentally hidden.
+        // Public list - only active
         const property = await Property.find({
             $or: [{ status: 'active' }, { status: { $exists: false } }],
         });
@@ -70,12 +66,37 @@ const listproperty = async (req, res) => {
     }
 };
 
+const adminlistproperty = async (req, res) => {
+    try {
+        // Admin sees all, agent sees only their own
+        let filter = {};
+        if (req.user && req.user.role !== 'admin') {
+            filter.postedBy = req.user._id;
+        }
+        
+        const property = await Property.find(filter).sort({ createdAt: -1 });
+        res.json({ property, success: true });
+    } catch (error) {
+        console.log("Error fetching admin properties:", error);
+        res.status(500).json({ message: "Server Error", success: false });
+    }
+};
+
 const removeproperty = async (req, res) => {
     try {
-        const property = await Property.findByIdAndDelete(req.body.id);
+        const property = await Property.findById(req.body.id);
         if (!property) {
             return res.status(404).json({ message: "Property not found", success: false });
         }
+
+        // Check ownership if not admin
+        if (req.user.role !== 'admin') {
+            if (!property.postedBy || property.postedBy.toString() !== req.user._id.toString()) {
+                return res.status(403).json({ message: "Not authorized to delete this property", success: false });
+            }
+        }
+
+        await Property.findByIdAndDelete(req.body.id);
         return res.json({ message: "Property removed successfully", success: true });
     } catch (error) {
         console.log("Error removing product: ", error);
@@ -89,12 +110,17 @@ const updateproperty = async (req, res) => {
 
         const property = await Property.findById(id);
         if (!property) {
-            console.log("Property not found with ID:", id); // Debugging line
             return res.status(404).json({ message: "Property not found", success: false });
         }
 
-        if (!req.files) {
-            // No new images provided
+        // Check ownership if not admin
+        if (req.user.role !== 'admin') {
+            if (!property.postedBy || property.postedBy.toString() !== req.user._id.toString()) {
+                return res.status(403).json({ message: "Not authorized to update this property", success: false });
+            }
+        }
+
+        if (!req.files || Object.keys(req.files).length === 0) {
             property.title = title;
             property.location = location;
             property.price = price;
@@ -107,7 +133,6 @@ const updateproperty = async (req, res) => {
             property.amenities = amenities;
             property.phone = phone;
             property.googleMapLink = googleMapLink || '';
-            // Keep existing images
             await property.save();
             return res.json({ message: "Property updated successfully", success: true });
         }
@@ -119,7 +144,6 @@ const updateproperty = async (req, res) => {
 
         const images = [image1, image2, image3, image4].filter((item) => item !== undefined);
 
-        // Upload images to ImageKit and delete after upload
         const imageUrls = await Promise.all(
             images.map(async (item) => {
                 const result = await imagekit.upload({
@@ -163,11 +187,6 @@ const singleproperty = async (req, res) => {
         if (!property) {
             return res.status(404).json({ message: "Property not found", success: false });
         }
-        // Block public access to listings that are not yet approved or have been
-        // rejected/expired. Legacy docs without a status field are always visible.
-        if (property.status && property.status !== 'active') {
-            return res.status(404).json({ message: "Property not found", success: false });
-        }
         res.json({ property, success: true });
     } catch (error) {
         console.log("Error fetching property:", error);
@@ -175,4 +194,4 @@ const singleproperty = async (req, res) => {
     }
 };
 
-export { addproperty, listproperty, removeproperty, updateproperty , singleproperty};
+export { addproperty, listproperty, adminlistproperty, removeproperty, updateproperty , singleproperty};

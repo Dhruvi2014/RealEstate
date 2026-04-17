@@ -183,7 +183,9 @@ const PropertyListings = () => {
   const fetchProperties = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${backendurl}/api/products/list`);
+      const response = await axios.get(`${backendurl}/api/products/admin-list`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
       if (response.data.success) {
         const parsed = response.data.property.map((p) => ({
           ...p,
@@ -211,7 +213,9 @@ const PropertyListings = () => {
   const handleRemoveProperty = async (propertyId, propertyTitle) => {
     if (!window.confirm(`Remove "${propertyTitle}"? This cannot be undone.`)) return;
     try {
-      const response = await axios.post(`${backendurl}/api/products/remove`, { id: propertyId });
+      const response = await axios.post(`${backendurl}/api/products/remove`, { id: propertyId }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
       if (response.data.success) {
         toast.success("Property removed successfully");
         await fetchProperties();

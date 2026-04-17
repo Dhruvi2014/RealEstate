@@ -5,10 +5,8 @@ import { useSEO } from '../hooks/useSEO';
 import HeroSection from '../components/home/HeroSection';
 import StatsSection from '../components/home/StatsSection';
 import AIIntelligenceSection from '../components/home/AIIntelligenceSection';
-import CuratedListingsSection from '../components/home/CuratedListingsSection';
 import ProcessSection from '../components/home/ProcessSection';
 import TrustSignalsSection from '../components/home/TrustSignalsSection';
-import TestimonialsSection from '../components/home/TestimonialsSection';
 import CTASection from '../components/home/CTASection';
 
 const HomePage: React.FC = () => {
@@ -31,17 +29,11 @@ const HomePage: React.FC = () => {
       {/* AI Intelligence Section */}
       <AIIntelligenceSection />
 
-      {/* Curated Listings Section */}
-      <CuratedListingsSection />
-
       {/* The Path to Your New Beginning Section */}
       <ProcessSection />
 
       {/* Redefining Real Estate Section */}
       <TrustSignalsSection />
-
-      {/* Testimonials Section */}
-      <TestimonialsSection />
 
       {/* CTA Section */}
       <CTASection />

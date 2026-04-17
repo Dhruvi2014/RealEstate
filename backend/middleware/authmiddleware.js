@@ -13,6 +13,13 @@ export const protect = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Check if it's the static super admin
+    if (decoded.id === 'static_admin_id') {
+      req.user = { _id: 'static_admin_id', role: 'admin', name: 'Super Admin' };
+      return next();
+    }
+
     const user = await userModel.findById(decoded.id).select("-password");
 
     if (!user) {

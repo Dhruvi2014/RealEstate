@@ -167,7 +167,14 @@ const calculateRevenue = async () => {
 // Appointment management
 export const getAllAppointments = async (req, res) => {
   try {
-    const appointments = await Appointment.find()
+    let filter = {};
+    if (req.user && req.user.role !== 'admin') {
+      const agentProperties = await Property.find({ postedBy: req.user._id }).select('_id');
+      const propertyIds = agentProperties.map(p => p._id);
+      filter = { propertyId: { $in: propertyIds } };
+    }
+
+    const appointments = await Appointment.find(filter)
       .populate('propertyId', 'title location')
       .populate('userId', 'name email')
       .sort({ createdAt: -1 });

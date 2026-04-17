@@ -29,6 +29,7 @@ interface PropertyData {
   amenities: string[];
   phone: string;
   googleMapLink?: string;
+  postedBy?: string;
 }
 
 const PropertyDetailsPage: React.FC = () => {
@@ -204,7 +205,7 @@ const PropertyDetailsPage: React.FC = () => {
             {/* Right Column - Schedule Viewing Sidebar */}
             <div className="lg:col-span-1">
               <ScheduleViewingCard
-                property={{ name: property.title, id: property._id }}
+                property={{ name: property.title, id: property._id, price: property.price, agentId: property.postedBy || '123456789012345678901234' }}
               />
             </div>
           </div>

@@ -28,7 +28,7 @@ router.get("/upcoming", getUpcomingAppointments);
 router.get("/agent", protect, getAgentAppointments);
 
 // Admin routes
-router.get("/all", getAllAppointments);
+router.get("/all", protect, getAllAppointments);
 router.get("/stats", getAppointmentStats);
 router.put("/status", updateAppointmentStatus);
 router.put("/update-meeting", updateAppointmentMeetingLink);

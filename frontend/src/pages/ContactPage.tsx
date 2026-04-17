@@ -5,10 +5,7 @@ import { useSEO } from '../hooks/useSEO';
 import ContactHeroSection from '../components/contact/ContactHeroSection';
 import ContactFormCard from '../components/contact/ContactFormCard';
 import ContactInfoCards from '../components/contact/ContactInfoCards';
-import ContactMapSection from '../components/contact/ContactMapSection';
 import FAQSection from '../components/contact/FAQSection';
-import OtherWaysSection from '../components/contact/OtherWaysSection';
-import NewsletterBanner from '../components/contact/NewsletterBanner';
 
 const ContactPage: React.FC = () => {
   useSEO({
@@ -41,17 +38,8 @@ const ContactPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Map Section */}
-      <ContactMapSection />
-
       {/* FAQ Section */}
       <FAQSection />
-
-      {/* Other Ways to Connect */}
-      <OtherWaysSection />
-
-      {/* Newsletter Banner */}
-      <NewsletterBanner />
 
       {/* Footer */}
       <Footer />

@@ -57,8 +57,8 @@ export const userAPI = {
   login: (data: { email: string; password: string }) =>
     apiClient.post('/users/login', data),
 
-  forgotPassword: (email: string) =>
-    apiClient.post('/users/forgot', { email }),
+  forgotPassword: (data: { email: string; password?: string }) =>
+    apiClient.post('/users/forgot', data),
 
   resetPassword: (token: string, password: string) =>
     apiClient.post(`/users/reset/${token}`, { password }),
@@ -185,6 +185,30 @@ export const chatbotAPI = {
 export const emiAPI = {
   calculate: (data: { principal: number; rate: number; tenureMonths: number }) =>
     apiClient.post('/emi/calculate', data),
+};
+
+// Property Requests (Booking & Payment)
+export const propertyRequestAPI = {
+  expressInterest: (data: { propertyId: string; agentId: string; bookingAmount?: number }) =>
+    apiClient.post('/property-requests/interest', data),
+
+  createPaymentOrder: (requestId: string) =>
+    apiClient.post(`/property-requests/payment/create/${requestId}`),
+
+  verifyPayment: (data: { requestId: string; razorpayPaymentId: string; razorpaySignature: string }) =>
+    apiClient.post('/property-requests/payment/verify', data),
+    
+  confirmCashPayment: (requestId: string) =>
+    apiClient.post(`/property-requests/payment/cash/${requestId}`),
+    
+  updateStatus: (requestId: string, status: string, rejectionReason?: string) =>
+    apiClient.put(`/property-requests/status/${requestId}`, { status, rejectionReason }),
+
+  getAgentRequests: () =>
+    apiClient.get('/property-requests/agent'),
+
+  getAllRequests: () =>
+    apiClient.get('/property-requests/all')
 };
 
 export default apiClient;

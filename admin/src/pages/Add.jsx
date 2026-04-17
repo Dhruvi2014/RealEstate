@@ -100,7 +100,10 @@ const PropertyForm = () => {
       });
 
       const response = await axios.post(`${backendurl}/api/products/add`, formdata, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        headers: { 
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
       });
 
       if (response.data.success) {

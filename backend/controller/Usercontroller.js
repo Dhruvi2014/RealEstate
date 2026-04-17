@@ -96,25 +96,18 @@ const register = async (req, res) => {
 
 const forgotpassword = async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email, password } = req.body;
+    if (!password) {
+      return res.status(400).json({ message: "Password is required", success: false });
+    }
     const user = await userModel.findOne({ email });
     if (!user) {
       return res.status(404).json({ message: "Email not found", success: false });
     }
-    const resetToken = crypto.randomBytes(20).toString("hex");
-    user.resetToken = resetToken;
-    user.resetTokenExpire = Date.now() + 10 * 60 * 1000; // 1 hour
+    user.password = await bcrypt.hash(password, 10);
     await user.save();
-    const resetUrl = `${process.env.WEBSITE_URL}/reset/${resetToken}`;
-    const mailOptions = {
-      from: process.env.EMAIL,
-      to: email,
-      subject: "Password Reset - BuildEstate Security",
-      html: getPasswordResetTemplate(resetUrl)
-    };
-
-    await transporter.sendMail(mailOptions);
-    return res.status(200).json({ message: "Email sent", success: true });
+    
+    return res.status(200).json({ message: "Password reset successful", success: true });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Server error", success: false });
