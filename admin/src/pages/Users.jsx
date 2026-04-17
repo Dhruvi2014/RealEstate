@@ -16,7 +16,9 @@ const Users = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${backendurl}/api/admin/users`);
+      const response = await axios.get(`${backendurl}/api/admin/users`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+      });
       if (response.data.success) {
         setUsers(response.data.users);
       } else {
@@ -40,7 +42,9 @@ const Users = () => {
   const handleRemoveUser = async (userId, userName) => {
     if (!window.confirm(`Remove user "${userName}"? This will also delete any properties and appointments tied to them and cannot be undone.`)) return;
     try {
-      const response = await axios.delete(`${backendurl}/api/admin/users/${userId}`);
+      const response = await axios.delete(`${backendurl}/api/admin/users/${userId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+      });
       if (response.data.success) {
         toast.success("User removed successfully");
         await fetchUsers();

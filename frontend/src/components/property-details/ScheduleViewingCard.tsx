@@ -26,7 +26,9 @@ const ScheduleViewingCard: React.FC<ScheduleViewingCardProps> = ({ property }) =
     timeSlot: ''
   });
   const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [existingAppointment, setExistingAppointment] = useState<any>(null);
+  const [existingRequest, setExistingRequest] = useState<any>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   // Payment States
@@ -49,17 +51,52 @@ const ScheduleViewingCard: React.FC<ScheduleViewingCardProps> = ({ property }) =
     const checkExistingAppointment = async () => {
       if (user) {
         try {
-          const res = await appointmentsAPI.getByUser();
-          if (res.data && res.data.data) {
-            const hasScheduled = res.data.data.some(
-              (app: any) => app.propertyId?._id === property.id || app.propertyId === property.id
+          // Fetch appointments and requests safely so one failure doesn't kill the other
+          let appRes, reqRes;
+          try {
+             appRes = await appointmentsAPI.getByUser();
+          } catch (err) {
+             console.error("Error fetching user appointments", err);
+          }
+          
+          try {
+             reqRes = await propertyRequestAPI.getUserRequests();
+          } catch (err) {
+             console.error("Error fetching user requests", err);
+          }
+
+          if (appRes && appRes.data && appRes.data.appointments) {
+            const found = appRes.data.appointments.find(
+              (app: any) => (app.propertyId?._id === property.id || app.propertyId === property.id) && app.status !== 'cancelled'
             );
-            if (hasScheduled) {
-              setSuccess(true);
+            if (found) {
+              setExistingAppointment(found);
+              setFormData({
+                fullName: found.guestInfo?.name || user.name || '',
+                email: found.guestInfo?.email || user.email || '',
+                phone: found.guestInfo?.phone || found.userId?.phone || '',
+                date: found.date ? found.date.substring(0, 10) : '',
+                timeSlot: found.time || ''
+              });
             }
           }
+
+          if (reqRes && reqRes.data && reqRes.data.data) {
+             const foundReq = reqRes.data.data.find(
+               (req: any) => {
+                  const reqPropId = req.propertyId?._id?.toString() || req.propertyId?.toString();
+                  const targetPropId = property.id?.toString();
+                  return reqPropId === targetPropId && req.status === 'confirmed';
+               }
+             );
+             if (foundReq) {
+               setExistingRequest(foundReq);
+               setBookingConfirmed(true);
+               setCustomAmount(foundReq.bookingAmount);
+             }
+          }
         } catch (error) {
-          console.error('Error checking existing appointments:', error);
+          console.error('Error checking existing data:', error);
         }
       }
     };
@@ -87,25 +124,41 @@ const ScheduleViewingCard: React.FC<ScheduleViewingCardProps> = ({ property }) =
     setError(null);
 
     try {
-      await appointmentsAPI.schedule({
-        propertyId: property.id,
-        date: formData.date,
-        time: formData.timeSlot,
-        name: formData.fullName,
-        email: formData.email,
-        phone: formData.phone,
-        message: `Viewing request for ${property.name}`,
-      });
-      setSuccess(true);
-      toast.success('Visit Scheduled Successfully!', {
-        description: "We'll confirm your appointment within 24 hours."
-      });
-      setFormData({ fullName: '', email: '', phone: '', date: '', timeSlot: '' });
+      if (isUpdating && existingAppointment) {
+        await appointmentsAPI.updateSchedule(existingAppointment._id, {
+          date: formData.date,
+          time: formData.timeSlot,
+          name: formData.fullName,
+          email: formData.email,
+          phone: formData.phone,
+          message: `Update viewing request for ${property.name}`,
+        });
+        toast.success('Visit Updated Successfully!', {
+          description: "Your schedule has been updated and is pending confirmation."
+        });
+        setExistingAppointment({ ...existingAppointment, date: formData.date, time: formData.timeSlot, status: 'pending' });
+        setIsUpdating(false);
+      } else {
+        const res = await appointmentsAPI.schedule({
+          propertyId: property.id,
+          date: formData.date,
+          time: formData.timeSlot,
+          name: formData.fullName,
+          email: formData.email,
+          phone: formData.phone,
+          message: `Viewing request for ${property.name}`,
+        });
+        toast.success('Visit Scheduled Successfully!', {
+          description: "We'll confirm your appointment within 24 hours."
+        });
+        setExistingAppointment(res.data.appointment);
+        setFormData({ fullName: '', email: '', phone: '', date: '', timeSlot: '' });
+      }
     } catch (err: any) {
-      console.error('Failed to schedule viewing:', err);
-      const msg = err.response?.data?.message || 'Failed to schedule. Please try again.';
+      console.error('Failed to schedule/update viewing:', err);
+      const msg = err.response?.data?.message || 'Failed to process request. Please try again.';
       setError(msg);
-      toast.error('Scheduling Failed', {
+      toast.error('Request Failed', {
         description: msg
       });
     } finally {
@@ -253,32 +306,46 @@ const ScheduleViewingCard: React.FC<ScheduleViewingCardProps> = ({ property }) =
     toast.info('You have chosen not to proceed.', {
       description: 'You can explore other properties on our platform.'
     });
-    setSuccess(false);
+    // We can just keep it as is, or reset existing appointment visually
   };
 
-  if (bookingConfirmed) {
+  if (bookingConfirmed || existingRequest) {
     return (
       <div className="bg-white border border-[#E6E0DA] rounded-2xl p-8 shadow-lg sticky top-8 text-center transition-all">
         <span className="material-icons text-5xl text-[#22C55E] mb-4">gpp_good</span>
         <h3 className="font-syne text-xl text-[#0F172A] mb-2">Booking Confirmed!</h3>
         <p className="font-manrope font-extralight text-sm text-[#64748B] mb-6">
-          Your payment arrangement of ₹{Number(customAmount).toLocaleString()} has been received successfully. The respective agent has been notified via Socket.IO.
+          You have already visited this property and completed your payment setup of ₹{Number(customAmount).toLocaleString()}. The respective agent has been notified and continues to track this process securely.
         </p>
       </div>
     );
   }
 
-  if (success) {
+  if (existingAppointment && !isUpdating) {
+    const isPending = existingAppointment.status === 'pending';
+
     return (
       <div className="bg-white border border-[#E6E0DA] rounded-2xl p-8 shadow-lg sticky top-8 text-center transition-all animate-in fade-in zoom-in duration-300">
-        <span className="material-icons text-5xl text-[#D4755B] mb-4">home_work</span>
-        <h3 className="font-syne text-xl text-[#0F172A] mb-2">Did you visit the property?</h3>
-        <p className="font-manrope font-extralight text-sm text-[#64748B] mb-6">
-          If you've evaluated the property and you're interested, you can immediately pay a booking token to secure it. If not, you can reject.
-        </p>
+        {isPending ? (
+          <>
+            <span className="material-icons text-5xl text-[#F59E0B] mb-4">hourglass_empty</span>
+            <h3 className="font-syne text-xl text-[#0F172A] mb-2">Visit Pending Confirmation</h3>
+            <p className="font-manrope font-extralight text-sm text-[#64748B] mb-6">
+              Your visit on {new Date(existingAppointment.date).toLocaleDateString()} at {existingAppointment.time} is pending confirmation from the agent. Once the agent confirms, you can proceed with the payment below.
+            </p>
+          </>
+        ) : (
+          <>
+            <span className="material-icons text-5xl text-[#22C55E] mb-4">check_circle</span>
+            <h3 className="font-syne text-xl text-[#0F172A] mb-2">Visit Confirmed!</h3>
+            <p className="font-manrope font-extralight text-sm text-[#64748B] mb-6">
+              Your visit was confirmed by the agent. If you've evaluated the property and you're interested, you can immediately pay a booking token to secure it. If not, you can reject.
+            </p>
+          </>
+        )}
         
         <div className="flex flex-col gap-3">
-          <div className="mb-2 text-left">
+          <div className="mb-2 text-left relative">
             <label className="block font-manrope font-extralight text-xs text-[#64748B] uppercase tracking-wider mb-2">
               Enter Booking Amount (₹)
             </label>
@@ -287,33 +354,45 @@ const ScheduleViewingCard: React.FC<ScheduleViewingCardProps> = ({ property }) =
               value={customAmount}
               onChange={(e) => setCustomAmount(e.target.value === '' ? '' : Number(e.target.value))}
               placeholder="e.g. 5000"
-              className="w-full bg-[#F5F1E8] border border-[#E6E0DA] rounded-lg px-4 py-3 font-manrope font-extralight text-sm text-[#0F172A] focus:outline-none focus:border-[#D4755B] transition-colors"
+              disabled={isPending}
+              className="w-full bg-[#F5F1E8] border border-[#E6E0DA] rounded-lg px-4 py-3 font-manrope font-extralight text-sm text-[#0F172A] focus:outline-none focus:border-[#D4755B] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
           
           <button
             onClick={handleExpressInterest}
-            disabled={processingPayment}
-            className="w-full bg-[#D4755B] hover:bg-[#C05621] disabled:opacity-50 text-white font-manrope font-bold text-sm py-3.5 rounded-xl transition-all shadow-md"
+            disabled={processingPayment || isPending}
+            className="w-full bg-[#D4755B] hover:bg-[#C05621] disabled:opacity-50 text-white font-manrope font-bold text-sm py-3.5 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 disabled:cursor-not-allowed"
           >
+            {isPending && <span className="material-icons text-[16px]">lock</span>}
             {processingPayment ? 'Processing...' : `I'm Interested & Pay Online`}
           </button>
           
           <button
             onClick={handleCashPayment}
-            disabled={processingPayment}
-            className="w-full bg-[#0F172A] hover:bg-[#1E293B] disabled:opacity-50 text-white font-manrope font-bold text-sm py-3.5 rounded-xl transition-all shadow-md"
+            disabled={processingPayment || isPending}
+            className="w-full bg-[#0F172A] hover:bg-[#1E293B] disabled:opacity-50 text-white font-manrope font-bold text-sm py-3.5 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 disabled:cursor-not-allowed"
           >
+            {isPending && <span className="material-icons text-[16px]">lock</span>}
             {processingPayment ? 'Processing...' : `I'm Interested & Pay via Cash`}
           </button>
           
           <button
             onClick={handleReject}
             disabled={processingPayment}
-            className="w-full bg-white border border-[#E6E0DA] hover:bg-[#F8F9FA] text-[#0F172A] font-manrope font-semibold text-sm py-3.5 rounded-xl transition-all"
+            className="w-full bg-white border border-[#E6E0DA] hover:bg-[#F8F9FA] text-[#0F172A] font-manrope font-semibold text-sm py-3.5 rounded-xl transition-all mt-2"
           >
             Not Interested / Reject
           </button>
+
+          {isPending && (
+            <button
+              onClick={() => setIsUpdating(true)}
+              className="w-full text-[#D4755B] hover:text-[#C05621] font-manrope font-semibold text-sm py-2 mt-2 transition-all underline"
+            >
+              Update Visit Schedule
+            </button>
+          )}
         </div>
       </div>
     );
@@ -454,8 +533,19 @@ const ScheduleViewingCard: React.FC<ScheduleViewingCardProps> = ({ property }) =
           disabled={submitting}
           className="w-full bg-[#D4755B] hover:bg-[#C05621] disabled:opacity-60 disabled:cursor-not-allowed text-white font-manrope font-bold text-base py-3.5 rounded-xl transition-all shadow-lg hover:shadow-xl mt-6"
         >
-          {submitting ? 'Scheduling...' : 'Schedule Visit'}
+          {submitting ? (isUpdating ? 'Updating...' : 'Scheduling...') : (isUpdating ? 'Update Visit' : 'Schedule Visit')}
         </button>
+
+        {isUpdating && (
+          <button
+            type="button"
+            onClick={() => setIsUpdating(false)}
+            disabled={submitting}
+            className="w-full mt-3 bg-white border border-[#E6E0DA] hover:bg-[#F8F9FA] text-[#0F172A] font-manrope font-semibold text-sm py-3.5 rounded-xl transition-all"
+          >
+            Cancel Update
+          </button>
+        )}
 
         {/* Info Text */}
         <p className="text-center font-manrope font-extralight text-xs text-[#94A3B8] mt-4">

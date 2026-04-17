@@ -3,7 +3,7 @@ import Navbar from '../components/common/Navbar';
 import Footer from '../components/common/Footer';
 import { useSEO } from '../hooks/useSEO';
 import HeroSection from '../components/home/HeroSection';
-import StatsSection from '../components/home/StatsSection';
+
 import AIIntelligenceSection from '../components/home/AIIntelligenceSection';
 import ProcessSection from '../components/home/ProcessSection';
 import TrustSignalsSection from '../components/home/TrustSignalsSection';
@@ -23,8 +23,7 @@ const HomePage: React.FC = () => {
       {/* Hero Section */}
       <HeroSection />
 
-      {/* Stats Section */}
-      <StatsSection />
+
 
       {/* AI Intelligence Section */}
       <AIIntelligenceSection />

@@ -10,16 +10,18 @@ import {
   getAppointmentStats,
   submitAppointmentFeedback,
   getUpcomingAppointments,
-  getAgentAppointments
+  getAgentAppointments,
+  updateScheduledViewing
 } from "../controller/appointmentController.js";
 
 
 const router = express.Router();
 
-// User routes — guest booking supported (no protect), auth booking also supported
+// User routes — guest booking supported (no protect), auth booking also supp
 router.post("/schedule", scheduleViewing);              // Guest booking (no auth required)
 router.post("/schedule/auth", protect, scheduleViewing); // Authenticated booking
-router.get("/user", getAppointmentsByUser);
+router.put("/schedule/:id", protect, updateScheduledViewing); // Authenticated viewing update
+router.get("/user", protect, getAppointmentsByUser);
 router.put("/cancel/:id", cancelAppointment);
 router.put("/feedback/:id", submitAppointmentFeedback);
 router.get("/upcoming", getUpcomingAppointments);

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, X, Send, Bot, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { chatbotAPI } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 type PropertyLink = {
   _id: string;
@@ -21,6 +22,7 @@ type Message = {
 };
 
 export default function Chatbot() {
+  const { isAuthenticated } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -71,6 +73,8 @@ export default function Chatbot() {
       setIsLoading(false);
     }
   };
+
+  if (!isAuthenticated) return null;
 
   return (
     <>

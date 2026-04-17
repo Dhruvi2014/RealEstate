@@ -56,6 +56,10 @@ const propertySchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    isSold: {
+      type: Boolean,
+      default: false,
+    },
 
     // ── User listing fields ──────────────────────────────────────────────────
     // Listings added via the admin panel leave these at their defaults.
@@ -65,10 +69,11 @@ const propertySchema = new mongoose.Schema(
     // 'active'   — approved and visible on the site
     // 'rejected' — not approved; rejectionReason is set
     // 'expired'  — was active but passed expiresAt date
+    // 'sold'     — properly bought/confirmed payment 
     // Admin-panel listings are saved directly as 'active' (no review needed).
     status: {
       type: String,
-      enum: ["pending", "active", "rejected", "expired"],
+      enum: ["pending", "active", "rejected", "expired", "sold"],
       default: "active", // admin-added properties go live immediately
     },
 

@@ -106,7 +106,17 @@ export const appointmentsAPI = {
     phone: string;
     message?: string;
   }) =>
-    apiClient.post('/appointments/schedule', data),
+    apiClient.post('/appointments/schedule/auth', data),
+
+  updateSchedule: (id: string, data: {
+    date: string;
+    time: string;
+    name: string;
+    email: string;
+    phone: string;
+    message?: string;
+  }) =>
+    apiClient.put(`/appointments/schedule/${id}`, data),
 
   getByUser: () =>
     apiClient.get('/appointments/user'),
@@ -208,7 +218,10 @@ export const propertyRequestAPI = {
     apiClient.get('/property-requests/agent'),
 
   getAllRequests: () =>
-    apiClient.get('/property-requests/all')
+    apiClient.get('/property-requests/all'),
+    
+  getUserRequests: () =>
+    apiClient.get('/property-requests/user')
 };
 
 export default apiClient;

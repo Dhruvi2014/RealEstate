@@ -62,7 +62,11 @@ const Navbar = () => {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('isAdmin');
-    navigate('/login');
+    localStorage.removeItem('userRole'); // Clear role specifically to be safe
+    
+    // Redirect to the main frontend website
+    const frontendUrl = window.location.origin.replace('5174', '5173') + '/';
+    window.location.href = frontendUrl;
   };
 
   const toggleMenu = () => {

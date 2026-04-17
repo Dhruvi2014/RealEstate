@@ -1,4 +1,5 @@
 import express from 'express';
+import protect from '../middleware/authmiddleware.js';
 import { 
   getAdminStats,
   getAllAppointments,
@@ -12,17 +13,17 @@ import {
 
 const router = express.Router();
 
-router.get('/stats', getAdminStats);
-router.get('/appointments', getAllAppointments);
-router.put('/appointments/status', updateAppointmentStatus);
+router.get('/stats', protect, getAdminStats);
+router.get('/appointments', protect, getAllAppointments);
+router.put('/appointments/status', protect, updateAppointmentStatus);
 
 // Listing review queue
-router.get('/properties/pending', getPendingListings);
-router.put('/properties/:id/approve', approveListing);
-router.put('/properties/:id/reject', rejectListing);
+router.get('/properties/pending', protect, getPendingListings);
+router.put('/properties/:id/approve', protect, approveListing);
+router.put('/properties/:id/reject', protect, rejectListing);
 
 // User management
-router.get('/users', getAllUsers);
-router.delete('/users/:id', deleteUser);
+router.get('/users', protect, getAllUsers);
+router.delete('/users/:id', protect, deleteUser);
 
 export default router;

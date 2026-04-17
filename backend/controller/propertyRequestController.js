@@ -157,6 +157,9 @@ export const verifyPayment = async (req, res) => {
     request.razorpayPaymentId = razorpayPaymentId;
     await request.save();
 
+    // Mark the property as sold
+    await Property.findByIdAndUpdate(request.propertyId, { isSold: true, status: 'sold' });
+
     // Commission Split Logic (Razorpay Route / Transfers)
     // To do this, you need Razorpay Route enabled and linked accounts for agent and owner
     // This is a simulation of the payload you would send to slice the payment
@@ -204,6 +207,9 @@ export const confirmCashPayment = async (req, res) => {
     request.paymentMethod = 'cash';
     await request.save();
 
+    // Mark the property as sold
+    await Property.findByIdAndUpdate(request.propertyId, { isSold: true, status: 'sold' });
+
     // Notify agent instantly of cash booking via socket
     const io = req.app.get('socketio');
     if (io) {
@@ -248,6 +254,36 @@ export const getAllRequests = async (req, res) => {
       .sort({ createdAt: -1 });
 
     res.status(200).json({ success: true, count: requests.length, data: requests });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Get requests made by the logged in user
+export const getUserRequests = async (req, res) => {
+  try {
+    const requests = await PropertyRequest.find({ userId: req.user.id })
+      .populate('propertyId', 'title price')
+      .populate('agentId', 'name email')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({ success: true, count: requests.length, data: requests });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const fixDb = async (req, res) => {
+  try {
+    const requests = await PropertyRequest.find({ status: 'confirmed' });
+    let count = 0;
+    for (const reqq of requests) {
+      if (reqq.propertyId) {
+        await Property.findByIdAndUpdate(reqq.propertyId, { isSold: true, status: 'sold' });
+        count++;
+      }
+    }
+    res.status(200).json({ success: true, fixed: count });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

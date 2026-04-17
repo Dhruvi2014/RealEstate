@@ -1,6 +1,8 @@
 import fs from "fs";
 import imagekit from "../config/imagekit.js";
 import Property from "../models/propertymodel.js";
+import Appointment from "../models/appointmentModel.js";
+import PropertyRequest from "../models/propertyRequestModel.js";
 
 const addproperty = async (req, res) => {
     try {
@@ -41,7 +43,8 @@ const addproperty = async (req, res) => {
             image: imageUrls,
             phone,
             googleMapLink: googleMapLink || '',
-            postedBy: req.user ? req.user._id : null
+            postedBy: req.user ? req.user._id : null,
+            status: (req.user && req.user.role === 'admin') ? 'active' : 'pending'
         });
 
         await product.save();
@@ -55,9 +58,9 @@ const addproperty = async (req, res) => {
 
 const listproperty = async (req, res) => {
     try {
-        // Public list - only active
+        // Public list - show active and sold properties
         const property = await Property.find({
-            $or: [{ status: 'active' }, { status: { $exists: false } }],
+            $or: [{ status: 'active' }, { status: 'sold' }, { status: { $exists: false } }],
         });
         res.json({ property, success: true });
     } catch (error) {
@@ -97,6 +100,9 @@ const removeproperty = async (req, res) => {
         }
 
         await Property.findByIdAndDelete(req.body.id);
+        await Appointment.deleteMany({ propertyId: req.body.id });
+        await PropertyRequest.deleteMany({ propertyId: req.body.id });
+
         return res.json({ message: "Property removed successfully", success: true });
     } catch (error) {
         console.log("Error removing product: ", error);
@@ -133,6 +139,10 @@ const updateproperty = async (req, res) => {
             property.amenities = amenities;
             property.phone = phone;
             property.googleMapLink = googleMapLink || '';
+            if (req.user && req.user.role !== 'admin') {
+                property.status = 'pending';
+                property.rejectionReason = '';
+            }
             await property.save();
             return res.json({ message: "Property updated successfully", success: true });
         }
@@ -171,6 +181,10 @@ const updateproperty = async (req, res) => {
         property.image = imageUrls;
         property.phone = phone;
         property.googleMapLink = googleMapLink || '';
+        if (req.user && req.user.role !== 'admin') {
+            property.status = 'pending';
+            property.rejectionReason = '';
+        }
 
         await property.save();
         res.json({ message: "Property updated successfully", success: true });

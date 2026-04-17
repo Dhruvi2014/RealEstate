@@ -179,6 +179,7 @@ const PropertyListings = () => {
   const [sortBy, setSortBy] = useState("newest");
   const [viewMode, setViewMode] = useState("grid");
   const [refreshing, setRefreshing] = useState(false);
+  const userRole = localStorage.getItem("userRole") || "admin";
 
   const fetchProperties = async () => {
     try {
@@ -274,13 +275,15 @@ const PropertyListings = () => {
               <RefreshCw className={cn("w-4 h-4", refreshing && "animate-spin")} />
               <span className="hidden sm:inline">Refresh</span>
             </motion.button>
-            <Link to="/add">
-              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                className="flex items-center gap-2 px-5 py-2.5 bg-[#D4755B] hover:bg-[#C05E44] text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-terracotta">
-                <Plus className="w-4 h-4" />
-                Add Property
-              </motion.button>
-            </Link>
+            {userRole === "agent" && (
+              <Link to="/add">
+                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-[#D4755B] hover:bg-[#C05E44] text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-terracotta">
+                  <Plus className="w-4 h-4" />
+                  Add Property
+                </motion.button>
+              </Link>
+            )}
           </div>
         </motion.div>
 
@@ -344,9 +347,9 @@ const PropertyListings = () => {
               </div>
               <h3 className="text-lg font-bold text-[#1C1B1A] mb-2">No properties found</h3>
               <p className="text-sm text-[#9CA3AF] mb-6">
-                {searchTerm || filterType !== "all" ? "Try adjusting your search or filters" : "Add your first property to get started"}
+                {searchTerm || filterType !== "all" ? "Try adjusting your search or filters" : userRole === "agent" ? "Add your first property to get started" : "No properties have been approved to live yet."}
               </p>
-              {!searchTerm && filterType === "all" && (
+              {!searchTerm && filterType === "all" && userRole === "agent" && (
                 <Link to="/add">
                   <button className="px-6 py-3 bg-[#D4755B] text-white rounded-xl font-semibold text-sm hover:bg-[#C05E44] transition-colors">
                     Add First Property

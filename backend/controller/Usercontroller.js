@@ -81,7 +81,11 @@ const register = async (req, res) => {
       html: getWelcomeTemplate(name)
     };
 
-    await transporter.sendMail(mailOptions);
+    try {
+      await transporter.sendMail(mailOptions);
+    } catch (emailError) {
+      console.error("Non-fatal: Failed to send welcome email:", emailError.message);
+    }
 
     return res.json({ token, user: { _id: newUser._id, name: newUser.name, email: newUser.email, role: newUser.role }, success: true });
   } catch (error) {

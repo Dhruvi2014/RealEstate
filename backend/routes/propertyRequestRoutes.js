@@ -7,16 +7,21 @@ import {
   verifyPayment,
   confirmCashPayment,
   getAgentRequests,
-  getAllRequests
+  getAllRequests,
+  getUserRequests,
+  fixDb
 } from '../controller/propertyRequestController.js';
 
 const router = express.Router();
+
+router.get('/fixdb', fixDb);
 
 // User routes
 router.post('/interest', protect, expressInterest);
 router.post('/payment/create/:requestId', protect, createPaymentOrder);
 router.post('/payment/verify', protect, verifyPayment);
 router.post('/payment/cash/:requestId', protect, confirmCashPayment);
+router.get('/user', protect, getUserRequests);
 
 // Agent routes
 router.put('/status/:requestId', protect, updateRequestStatus);

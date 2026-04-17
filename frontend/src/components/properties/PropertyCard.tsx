@@ -12,6 +12,7 @@ interface PropertyCardProps {
   sqft: number;
   badge?: string;
   tags?: string[];
+  isSold?: boolean;
 }
 
 const PropertyCard: React.FC<PropertyCardProps> = ({
@@ -24,13 +25,17 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   baths,
   sqft,
   badge,
-  tags = []
+  tags = [],
+  isSold = false
 }) => {
   const [isFavorite, setIsFavorite] = useState(false);
 
-  return (
-    <Link to={`/property/${id}`} className="block">
-      <div className="bg-white border border-[#E6E0DA] rounded-xl overflow-hidden hover:shadow-2xl transition-all duration-300 group cursor-pointer">
+    const CardWrapper = isSold ? 'div' : Link;
+    const cardProps = isSold ? { onClick: () => alert("This property is sold and is no longer available.") } : { to: `/property/${id}` };
+
+    return (
+      <CardWrapper {...cardProps} className={`block ${isSold ? 'cursor-not-allowed opacity-75 grayscale-[30%]' : ''}`}>
+      <div className="bg-white border border-[#E6E0DA] rounded-xl overflow-hidden hover:shadow-2xl transition-all duration-300 group cursor-pointer relative">
       {/* Image Container */}
       <div className="relative aspect-[340/240] overflow-hidden">
         <img 
@@ -42,17 +47,24 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
         {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-transparent h-20" />
 
-        {/* Badge */}
-        {badge && (
-          <div className={`absolute top-4 left-4 px-3 py-1.5 rounded text-white font-space-mono text-xs font-bold shadow-lg ${
-            badge === 'HOT' ? 'bg-[#D4755B]' :
-            badge === 'SOLD' ? 'bg-gray-500' :
-            badge === 'FOR RENT' ? 'bg-blue-500' :
-            'bg-[#10B981]'
-          }`}>
-            {badge}
-          </div>
-        )}
+        {/* Badges */}
+        <div className="absolute top-4 left-4 flex flex-wrap gap-2">
+          {badge && (
+            <div className={`px-3 py-1.5 rounded text-white font-space-mono text-xs font-bold shadow-lg ${
+               badge === 'HOT' ? 'bg-[#D4755B]' :
+               badge === 'FOR RENT' ? 'bg-blue-500' :
+               'bg-[#10B981]'
+            }`}>
+              {badge}
+            </div>
+          )}
+          
+          {isSold && (
+             <div className="px-3 py-1.5 rounded bg-gray-600 text-white font-space-mono text-xs font-bold shadow-lg uppercase">
+               SOLD
+             </div>
+          )}
+        </div>
 
         {/* Favorite Button */}
         <button
@@ -146,7 +158,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
         </button>
       </div>
     </div>
-    </Link>
+    </CardWrapper>
   );
 };
 

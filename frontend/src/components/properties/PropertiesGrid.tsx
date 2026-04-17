@@ -71,11 +71,11 @@ const PropertiesGrid: React.FC<PropertiesGridProps> = ({ properties, viewMode = 
               baths={property.baths}
               sqft={property.sqft}
               badge={
-                property.availability === 'sold' ? 'SOLD' :
                 property.availability === 'rent' ? 'FOR RENT' :
-                property.availability === 'sale' ? 'FOR SALE' :
+                property.availability === 'sale' ? 'BUY' :
                 property.availability?.toUpperCase()
               }
+              isSold={(property as any).isSold}
               tags={property.type ? [property.type] : []}
             />
           </motion.div>

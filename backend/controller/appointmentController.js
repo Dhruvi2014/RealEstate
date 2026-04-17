@@ -328,6 +328,72 @@ export const scheduleViewing = async (req, res) => {
   }
 };
 
+export const updateScheduledViewing = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { date, time, name, email, phone, message } = req.body;
+
+    const appointment = await Appointment.findById(id);
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Appointment not found'
+      });
+    }
+
+    if (appointment.userId && req.user && appointment.userId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to update this appointment'
+      });
+    }
+
+    // Check for another duplicate slot, excluding the current appointment
+    const existingAppointment = await Appointment.findOne({
+      propertyId: appointment.propertyId,
+      date,
+      time,
+      status: { $ne: 'cancelled' },
+      _id: { $ne: id }
+    });
+
+    if (existingAppointment) {
+      return res.status(400).json({
+        success: false,
+        message: 'This time slot is already booked'
+      });
+    }
+
+    if (date) appointment.date = date;
+    if (time) appointment.time = time;
+    if (message) appointment.notes = message;
+    if (name || email || phone) {
+      appointment.guestInfo = {
+        name: name || appointment.guestInfo?.name,
+        email: email || appointment.guestInfo?.email,
+        phone: phone || appointment.guestInfo?.phone
+      };
+    }
+    
+    // Setting status to pending so agent can re-confirm if date/time changed
+    appointment.status = 'pending';
+
+    await appointment.save();
+
+    res.json({
+      success: true,
+      message: 'Viewing schedule updated successfully',
+      appointment
+    });
+  } catch (error) {
+    console.error('Error updating scheduled viewing:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating scheduled viewing'
+    });
+  }
+};
+
 // Add this with other exports
 export const cancelAppointment = async (req, res) => {
   try {

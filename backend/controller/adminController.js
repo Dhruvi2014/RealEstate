@@ -27,32 +27,60 @@ const formatRecentAppointments = (appointments) => {
 // Add these helper functions before the existing exports
 export const getAdminStats = async (req, res) => {
   try {
-    const [
-      totalProperties,
-      activeListings,
-      totalUsers,
-      pendingAppointments,
-      recentActivity,
-      viewsData,
-    ] = await Promise.all([
-      Property.countDocuments(),
-      Property.countDocuments({ status: "active" }),
-      User.countDocuments(),
-      Appointment.countDocuments({ status: "pending" }),
-      getRecentActivity(),
-      getViewsData(),
-    ]);
+    const isAdmin = req.user && req.user.role === 'admin';
+    const userId = req.user ? req.user._id : null;
 
-    res.json({
-      success: true,
-      stats: {
+    let stats = {};
+
+    if (isAdmin) {
+      const allProperties = await Property.find({}).select('_id');
+      const allPropertyIds = allProperties.map(p => p._id);
+
+      const [
         totalProperties,
         activeListings,
         totalUsers,
         pendingAppointments,
         recentActivity,
         viewsData,
-      },
+      ] = await Promise.all([
+        Property.countDocuments(),
+        Property.countDocuments({ status: "active" }),
+        User.countDocuments(),
+        Appointment.countDocuments({ propertyId: { $in: allPropertyIds }, status: "pending" }),
+        getRecentActivity(),
+        getViewsData(),
+      ]);
+      stats = { totalProperties, activeListings, totalUsers, pendingAppointments, recentActivity, viewsData };
+    } else {
+      const agentProperties = await Property.find({ postedBy: userId }).select('_id');
+      const propertyIds = agentProperties.map(p => p._id);
+
+      const [
+        totalProperties,
+        activeListings,
+        pendingAppointments,
+        recentActivity,
+      ] = await Promise.all([
+        Property.countDocuments({ postedBy: userId }),
+        Property.countDocuments({ postedBy: userId, status: "active" }),
+        Appointment.countDocuments({ propertyId: { $in: propertyIds }, status: "pending" }),
+        getRecentActivity(propertyIds),
+      ]);
+
+      stats = {
+        totalProperties,
+        activeListings,
+        totalUsers: 0,
+        pendingAppointments,
+        recentActivity,
+        viewsData: { labels: [], datasets: [] }
+      };
+    }
+
+    res.json({
+      success: true,
+      stats,
     });
   } catch (error) {
     console.error("Admin stats error:", error);
@@ -63,14 +91,16 @@ export const getAdminStats = async (req, res) => {
   }
 };
 
-const getRecentActivity = async () => {
+const getRecentActivity = async (propertyIds = null) => {
   try {
-    const recentProperties = await Property.find()
+    const propFilter = propertyIds ? { _id: { $in: propertyIds } } : {};
+    const recentProperties = await Property.find(propFilter)
       .sort({ createdAt: -1 })
       .limit(5)
       .select("title createdAt");
 
-    const recentAppointments = await Appointment.find()
+    const apptFilter = propertyIds ? { propertyId: { $in: propertyIds } } : {};
+    const recentAppointments = await Appointment.find(apptFilter)
       .sort({ createdAt: -1 })
       .limit(5)
       .populate("propertyId", "title")
@@ -162,10 +192,27 @@ const getViewsData = async () => {
 // Add these new controller functions
 export const getAllAppointments = async (req, res) => {
   try {
-    const appointments = await Appointment.find()
-      .populate("propertyId", "title location")
-      .populate("userId", "name email")
-      .sort({ createdAt: -1 });
+    const isAdmin = req.user && req.user.role === 'admin';
+    const userId = req.user ? req.user._id : null;
+    
+    let appointments;
+    if (isAdmin) {
+      const allProperties = await Property.find({}).select('_id');
+      const allPropertyIds = allProperties.map(p => p._id);
+
+      appointments = await Appointment.find({ propertyId: { $in: allPropertyIds } })
+        .populate("propertyId", "title location")
+        .populate("userId", "name email")
+        .sort({ createdAt: -1 });
+    } else {
+      const agentProperties = await Property.find({ postedBy: userId }).select('_id');
+      const propertyIds = agentProperties.map(p => p._id);
+      
+      appointments = await Appointment.find({ propertyId: { $in: propertyIds } })
+        .populate("propertyId", "title location")
+        .populate("userId", "name email")
+        .sort({ createdAt: -1 });
+    }
 
     res.json({
       success: true,

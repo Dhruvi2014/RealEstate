@@ -114,6 +114,31 @@ const PropertyDetailsPage: React.FC = () => {
     );
   }
 
+  if ((property as any).isSold) {
+    return (
+      <div className="bg-white min-h-screen">
+        <Navbar />
+        <div className="flex flex-col items-center justify-center py-32 text-center px-4">
+          <span className="material-icons text-[80px] text-[#C4C4C4] mb-6">sell</span>
+          <h2 className="font-syne text-4xl font-bold text-[#221410] mb-4">Property Sold Out</h2>
+          <p className="font-manrope text-[#6b7280] text-lg max-w-md mb-8">
+            We're sorry, but this property has already been acquired by another buyer and is no longer available.
+          </p>
+          <button
+            onClick={() => {
+               alert("This property is completely sold and cannot be opened!");
+               window.location.href = "/properties";
+            }}
+            className="bg-[#D4755B] text-white font-manrope font-bold px-8 py-3 rounded-lg hover:bg-[#B86851] transition-all inline-block"
+          >
+            Explore Other Properties
+          </button>
+        </div>
+        <SimpleFooter />
+      </div>
+    );
+  }
+
   // Extract city from location string (e.g. "Satellite, Ahmedabad, Gujarat" → "Ahmedabad")
   // Indian addresses typically end with state, so use second-to-last part as city
   const cityParts = property.location.split(',').map(s => s.trim());
@@ -163,8 +188,8 @@ const PropertyDetailsPage: React.FC = () => {
         propertyName={property.title}
       />
 
-      {/* Hero Image */}
-      <PropertyHeroImage image={property.image?.[0]} />
+      {/* Hero Image Gallery */}
+      <PropertyHeroImage images={property.image} />
 
       {/* Property Header with Price & Specs */}
       <PropertyHeader
